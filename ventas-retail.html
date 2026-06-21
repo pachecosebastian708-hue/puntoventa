@@ -3,271 +3,206 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Punto de Venta</title>
+<title>PuntoVenta</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
-  :root {
-    --bg: #f7f7f5;
-    --surface: #ffffff;
-    --surface2: #f1efea;
-    --border: rgba(0,0,0,0.1);
-    --border2: rgba(0,0,0,0.18);
-    --text: #1a1a18;
-    --text2: #5f5e5a;
-    --text3: #888780;
-    --accent: #185FA5;
-    --accent-bg: #E6F1FB;
-    --accent-text: #0C447C;
-    --success: #0F6E56;
-    --success-bg: #E1F5EE;
-    --success-text: #085041;
-    --danger: #A32D2D;
-    --danger-bg: #FCEBEB;
-    --danger-text: #791F1F;
-    --amber: #BA7517;
-    --amber-bg: #FAEEDA;
-    --amber-text: #633806;
-    --radius: 10px;
-    --radius-sm: 6px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-  
-  /* NAV */
-  nav { background: var(--surface); border-bottom: 0.5px solid var(--border2); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 100; }
-  .nav-brand { font-weight: 600; font-size: 17px; color: var(--text); letter-spacing: -0.3px; }
-  .nav-brand span { color: var(--accent); }
-  .nav-tabs { display: flex; gap: 4px; }
-  .tab-btn { padding: 6px 14px; border: none; background: transparent; border-radius: var(--radius-sm); font-size: 14px; color: var(--text2); cursor: pointer; transition: all 0.15s; font-weight: 500; }
-  .tab-btn:hover { background: var(--surface2); color: var(--text); }
-  .tab-btn.active { background: var(--accent-bg); color: var(--accent-text); }
-  .nav-right { display: flex; align-items: center; gap: 10px; }
-  .export-btn { padding: 7px 14px; background: var(--success-bg); color: var(--success-text); border: 0.5px solid rgba(15,110,86,0.25); border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
-  .export-btn:hover { background: #b4dfd4; }
-
-  /* SECTIONS */
-  .section { display: none; }
-  .section.active { display: block; }
-
-  /* VENTAS */
-  .ventas-layout { display: grid; grid-template-columns: 1fr 340px; gap: 20px; padding: 20px 24px; max-width: 1200px; margin: 0 auto; }
-  .panel-title { font-size: 13px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
-  
-  .search-bar { position: relative; margin-bottom: 14px; }
-  .search-bar input { width: 100%; padding: 9px 12px 9px 36px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); font-size: 14px; background: var(--surface); color: var(--text); outline: none; transition: border 0.15s; }
-  .search-bar input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,95,165,0.1); }
-  .search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 15px; pointer-events: none; }
-
-  .cat-filter { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
-  .cat-pill { padding: 4px 12px; border: 0.5px solid var(--border2); border-radius: 20px; font-size: 13px; cursor: pointer; background: var(--surface); color: var(--text2); transition: all 0.15s; }
-  .cat-pill:hover { background: var(--surface2); }
-  .cat-pill.active { background: var(--accent-bg); color: var(--accent-text); border-color: rgba(24,95,165,0.3); }
-
-  .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-  .product-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px 12px; cursor: pointer; transition: all 0.15s; position: relative; }
-  .product-card:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-  .product-card:active { transform: scale(0.98); }
-  .product-card.out-of-stock { opacity: 0.5; cursor: not-allowed; }
-  .prod-cat { font-size: 11px; color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
-  .prod-name { font-size: 14px; font-weight: 500; color: var(--text); line-height: 1.3; margin-bottom: 8px; }
-  .prod-price { font-size: 16px; font-weight: 600; color: var(--accent-text); }
-  .prod-stock { font-size: 11px; color: var(--text3); margin-top: 4px; }
-  .prod-stock.low { color: var(--amber); }
-  .no-products { padding: 40px; text-align: center; color: var(--text3); font-size: 14px; }
-
-  /* CARRITO */
-  .cart-panel { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; height: fit-content; position: sticky; top: 76px; }
-  .cart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-  .cart-title { font-size: 15px; font-weight: 600; }
-  .clear-btn { font-size: 12px; color: var(--danger); background: none; border: none; cursor: pointer; padding: 2px 6px; border-radius: var(--radius-sm); }
-  .clear-btn:hover { background: var(--danger-bg); }
-  .cart-empty { padding: 24px 0; text-align: center; color: var(--text3); font-size: 13px; }
-  .cart-items { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; margin-bottom: 14px; }
-  .cart-item { display: flex; align-items: center; gap: 8px; padding: 8px; background: var(--surface2); border-radius: var(--radius-sm); }
-  .cart-item-info { flex: 1; min-width: 0; }
-  .cart-item-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .cart-item-price { font-size: 12px; color: var(--text2); }
-  .cart-qty { display: flex; align-items: center; gap: 4px; }
-  .qty-btn { width: 22px; height: 22px; border: 0.5px solid var(--border2); background: var(--surface); border-radius: 4px; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text); }
-  .qty-btn:hover { background: var(--surface2); }
-  .qty-num { font-size: 13px; font-weight: 600; min-width: 20px; text-align: center; }
-  .cart-item-total { font-size: 13px; font-weight: 600; color: var(--accent-text); min-width: 60px; text-align: right; }
-
-  .cart-divider { border: none; border-top: 0.5px solid var(--border); margin: 8px 0; }
-  .cart-totals { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-  .total-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--text2); }
-  .total-row.main { font-size: 17px; font-weight: 700; color: var(--text); }
-  
-  .descuento-row { display: flex; gap: 6px; margin-bottom: 12px; }
-  .descuento-row input { flex: 1; padding: 7px 10px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); font-size: 13px; outline: none; }
-  .descuento-row input:focus { border-color: var(--accent); }
-  .descuento-row select { padding: 7px 8px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); font-size: 13px; background: var(--surface); outline: none; }
-
-  .client-row { margin-bottom: 12px; }
-  .client-row input { width: 100%; padding: 7px 10px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); font-size: 13px; outline: none; }
-  .client-row input:focus { border-color: var(--accent); }
-  
-  .pay-methods { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 14px; }
-  .pay-btn { padding: 7px 4px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); font-size: 12px; cursor: pointer; background: var(--surface); color: var(--text2); font-weight: 500; transition: all 0.15s; text-align: center; }
-  .pay-btn:hover { background: var(--surface2); }
-  .pay-btn.active { background: var(--accent-bg); color: var(--accent-text); border-color: rgba(24,95,165,0.35); }
-
-  .confirm-btn { width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
-  .confirm-btn:hover { background: #0f4a8a; }
-  .confirm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-  /* HISTORIAL */
-  .historial-layout { padding: 20px 24px; max-width: 1200px; margin: 0 auto; }
-  .hist-filters { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
-  .hist-filters input[type="date"] { padding: 7px 10px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); font-size: 13px; background: var(--surface); color: var(--text); outline: none; }
-  .hist-filters select { padding: 7px 10px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); font-size: 13px; background: var(--surface); color: var(--text); outline: none; }
-
-  .summary-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
-  .sum-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
-  .sum-label { font-size: 12px; color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
-  .sum-value { font-size: 22px; font-weight: 700; color: var(--text); }
-  .sum-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
-
-  .ventas-table { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-  .ventas-table table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  .ventas-table th { background: var(--surface2); padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 0.5px solid var(--border2); }
-  .ventas-table td { padding: 10px 14px; border-bottom: 0.5px solid var(--border); color: var(--text); }
-  .ventas-table tr:last-child td { border-bottom: none; }
-  .ventas-table tr:hover td { background: var(--surface2); }
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-  .badge-cash { background: var(--success-bg); color: var(--success-text); }
-  .badge-card { background: var(--accent-bg); color: var(--accent-text); }
-  .badge-transfer { background: var(--amber-bg); color: var(--amber-text); }
-  .no-data { padding: 40px; text-align: center; color: var(--text3); font-size: 14px; }
-  .del-venta-btn { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 4px; }
-  .del-venta-btn:hover { color: var(--danger); background: var(--danger-bg); }
-  .detail-toggle { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 12px; padding: 2px 6px; }
-  .detail-row { background: var(--accent-bg) !important; }
-  .detail-row td { color: var(--accent-text) !important; font-size: 12px; padding: 6px 14px !important; }
-
-  /* ADMIN */
-  .admin-layout { padding: 20px 24px; max-width: 1000px; margin: 0 auto; }
-  .admin-lock { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; text-align: center; }
-  .lock-icon { font-size: 40px; color: var(--text3); margin-bottom: 16px; }
-  .lock-title { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
-  .lock-sub { font-size: 14px; color: var(--text2); margin-bottom: 24px; }
-  .lock-form { display: flex; gap: 8px; }
-  .lock-form input { padding: 9px 14px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); font-size: 14px; outline: none; width: 220px; }
-  .lock-form input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,95,165,0.1); }
-  .lock-form button { padding: 9px 18px; background: var(--accent); color: white; border: none; border-radius: var(--radius-sm); font-size: 14px; font-weight: 500; cursor: pointer; }
-  .lock-err { font-size: 13px; color: var(--danger); margin-top: 8px; }
-
-  .admin-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-  .admin-header h2 { font-size: 20px; font-weight: 600; }
-  .logout-btn { font-size: 13px; color: var(--text2); background: none; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 6px 12px; cursor: pointer; }
-  .logout-btn:hover { background: var(--surface2); }
-
-  .admin-sections { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
-  .admin-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 18px; }
-  .admin-card-title { font-size: 15px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
-  .admin-form { display: flex; flex-direction: column; gap: 10px; }
-  .form-row { display: flex; flex-direction: column; gap: 4px; }
-  .form-row label { font-size: 12px; font-weight: 500; color: var(--text2); }
-  .form-row input, .form-row select { padding: 8px 10px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); font-size: 14px; outline: none; background: var(--surface); color: var(--text); }
-  .form-row input:focus, .form-row select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,95,165,0.1); }
-  .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .add-prod-btn { padding: 9px; background: var(--accent); color: white; border: none; border-radius: var(--radius-sm); font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 4px; }
-  .add-prod-btn:hover { background: #0f4a8a; }
-
-  .prod-list-admin { display: flex; flex-direction: column; gap: 6px; max-height: 420px; overflow-y: auto; }
-  .prod-item-admin { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 0.5px solid var(--border); border-radius: var(--radius-sm); background: var(--surface2); }
-  .pia-info { flex: 1; min-width: 0; }
-  .pia-name { font-size: 13px; font-weight: 500; }
-  .pia-meta { font-size: 12px; color: var(--text3); }
-  .pia-price { font-size: 14px; font-weight: 700; color: var(--accent-text); min-width: 70px; text-align: right; }
-  .pia-actions { display: flex; gap: 4px; }
-  .pia-edit { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 14px; padding: 3px 6px; border-radius: 4px; }
-  .pia-edit:hover { color: var(--accent); background: var(--accent-bg); }
-  .pia-del { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 14px; padding: 3px 6px; border-radius: 4px; }
-  .pia-del:hover { color: var(--danger); background: var(--danger-bg); }
-
-  .pass-section { margin-top: 16px; border-top: 0.5px solid var(--border); padding-top: 16px; }
-  .pass-section h4 { font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text2); }
-
-  /* TOAST */
-  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--text); color: white; padding: 12px 18px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; z-index: 9999; transform: translateY(100px); opacity: 0; transition: all 0.3s; pointer-events: none; }
-  .toast.show { transform: translateY(0); opacity: 1; }
-  .toast.success { background: var(--success); }
-  .toast.error { background: var(--danger); }
-
-  /* MODAL */
-  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 500; display: none; align-items: center; justify-content: center; }
-  .modal-overlay.open { display: flex; }
-  .modal { background: var(--surface); border-radius: var(--radius); padding: 24px; width: 360px; max-width: 95vw; }
-  .modal h3 { font-size: 17px; font-weight: 600; margin-bottom: 16px; }
-  .modal-actions { display: flex; gap: 8px; margin-top: 18px; justify-content: flex-end; }
-  .modal-actions button { padding: 8px 16px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 500; cursor: pointer; }
-  .btn-cancel { background: none; border: 0.5px solid var(--border2); color: var(--text2); }
-  .btn-cancel:hover { background: var(--surface2); }
-  .btn-confirm { background: var(--accent); color: white; border: none; }
-  .btn-confirm:hover { background: #0f4a8a; }
-
-  @media (max-width: 768px) {
-    .ventas-layout { grid-template-columns: 1fr; }
-    .admin-sections { grid-template-columns: 1fr; }
-    .summary-cards { grid-template-columns: 1fr 1fr; }
-    .cart-panel { position: static; }
-  }
+  :root{--bg:#f7f7f5;--surface:#fff;--surface2:#f1efea;--border:rgba(0,0,0,.1);--border2:rgba(0,0,0,.18);--text:#1a1a18;--text2:#5f5e5a;--text3:#888780;--accent:#185FA5;--accent-bg:#E6F1FB;--accent-text:#0C447C;--success:#0F6E56;--success-bg:#E1F5EE;--success-text:#085041;--danger:#A32D2D;--danger-bg:#FCEBEB;--danger-text:#791F1F;--amber:#BA7517;--amber-bg:#FAEEDA;--amber-text:#633806;--radius:10px;--radius-sm:6px}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+  #app-loader{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:14px}
+  .loader-spinner{width:36px;height:36px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loader-text{font-size:14px;color:var(--text2)}
+  .sync-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--success);margin-right:6px;animation:pulse 1.5s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  nav{background:var(--surface);border-bottom:.5px solid var(--border2);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
+  .nav-brand{font-weight:600;font-size:17px;letter-spacing:-.3px}
+  .nav-brand span{color:var(--accent)}
+  .nav-status{font-size:12px;color:var(--success-text);background:var(--success-bg);padding:3px 10px;border-radius:20px;display:flex;align-items:center}
+  .nav-tabs{display:flex;gap:4px}
+  .tab-btn{padding:6px 14px;border:none;background:transparent;border-radius:var(--radius-sm);font-size:14px;color:var(--text2);cursor:pointer;transition:all .15s;font-weight:500}
+  .tab-btn:hover{background:var(--surface2);color:var(--text)}
+  .tab-btn.active{background:var(--accent-bg);color:var(--accent-text)}
+  .export-btn{padding:7px 14px;background:var(--success-bg);color:var(--success-text);border:.5px solid rgba(15,110,86,.25);border-radius:var(--radius-sm);font-size:13px;font-weight:500;cursor:pointer}
+  .export-btn:hover{background:#b4dfd4}
+  .section{display:none}.section.active{display:block}
+  .ventas-layout{display:grid;grid-template-columns:1fr 340px;gap:20px;padding:20px 24px;max-width:1200px;margin:0 auto}
+  .panel-title{font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+  .search-bar{position:relative;margin-bottom:14px}
+  .search-bar input{width:100%;padding:9px 12px 9px 36px;border:.5px solid var(--border2);border-radius:var(--radius-sm);font-size:14px;background:var(--surface);color:var(--text);outline:none}
+  .search-bar input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(24,95,165,.1)}
+  .search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:15px;pointer-events:none}
+  .cat-filter{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+  .cat-pill{padding:4px 12px;border:.5px solid var(--border2);border-radius:20px;font-size:13px;cursor:pointer;background:var(--surface);color:var(--text2);transition:all .15s}
+  .cat-pill:hover{background:var(--surface2)}
+  .cat-pill.active{background:var(--accent-bg);color:var(--accent-text);border-color:rgba(24,95,165,.3)}
+  .products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .product-card{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius);padding:14px 12px;cursor:pointer;transition:all .15s}
+  .product-card:hover{border-color:var(--accent);transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+  .product-card:active{transform:scale(.98)}
+  .product-card.out-of-stock{opacity:.5;cursor:not-allowed}
+  .prod-cat{font-size:11px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+  .prod-name{font-size:14px;font-weight:500;color:var(--text);line-height:1.3;margin-bottom:8px}
+  .prod-price{font-size:16px;font-weight:600;color:var(--accent-text)}
+  .prod-stock{font-size:11px;color:var(--text3);margin-top:4px}
+  .prod-stock.low{color:var(--amber)}
+  .no-products{padding:40px;text-align:center;color:var(--text3);font-size:14px;grid-column:1/-1}
+  .cart-panel{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;height:fit-content;position:sticky;top:76px}
+  .cart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .cart-title{font-size:15px;font-weight:600}
+  .clear-btn{font-size:12px;color:var(--danger);background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:var(--radius-sm)}
+  .clear-btn:hover{background:var(--danger-bg)}
+  .cart-empty{padding:24px 0;text-align:center;color:var(--text3);font-size:13px}
+  .cart-items{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;margin-bottom:14px}
+  .cart-item{display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius-sm)}
+  .cart-item-info{flex:1;min-width:0}
+  .cart-item-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cart-item-price{font-size:12px;color:var(--text2)}
+  .cart-qty{display:flex;align-items:center;gap:4px}
+  .qty-btn{width:22px;height:22px;border:.5px solid var(--border2);background:var(--surface);border-radius:4px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text)}
+  .qty-btn:hover{background:var(--surface2)}
+  .qty-num{font-size:13px;font-weight:600;min-width:20px;text-align:center}
+  .cart-item-total{font-size:13px;font-weight:600;color:var(--accent-text);min-width:60px;text-align:right}
+  .cart-divider{border:none;border-top:.5px solid var(--border);margin:8px 0}
+  .cart-totals{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+  .total-row{display:flex;justify-content:space-between;font-size:13px;color:var(--text2)}
+  .total-row.main{font-size:17px;font-weight:700;color:var(--text)}
+  .descuento-row{display:flex;gap:6px;margin-bottom:12px}
+  .descuento-row input{flex:1;padding:7px 10px;border:.5px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;outline:none}
+  .descuento-row input:focus{border-color:var(--accent)}
+  .descuento-row select{padding:7px 8px;border:.5px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);outline:none}
+  .client-row{margin-bottom:12px}
+  .client-row input{width:100%;padding:7px 10px;border:.5px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;outline:none}
+  .client-row input:focus{border-color:var(--accent)}
+  .pay-methods{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px}
+  .pay-btn{padding:7px 4px;border:.5px solid var(--border2);border-radius:var(--radius-sm);font-size:12px;cursor:pointer;background:var(--surface);color:var(--text2);font-weight:500;transition:all .15s;text-align:center}
+  .pay-btn:hover{background:var(--surface2)}
+  .pay-btn.active{background:var(--accent-bg);color:var(--accent-text);border-color:rgba(24,95,165,.35)}
+  .confirm-btn{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:600;cursor:pointer}
+  .confirm-btn:hover{background:#0f4a8a}
+  .historial-layout{padding:20px 24px;max-width:1200px;margin:0 auto}
+  .hist-filters{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+  .hist-filters input[type="date"],.hist-filters select{padding:7px 10px;border:.5px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);color:var(--text);outline:none}
+  .summary-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+  .sum-card{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+  .sum-label{font-size:12px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+  .sum-value{font-size:22px;font-weight:700;color:var(--text)}
+  .sum-sub{font-size:12px;color:var(--text3);margin-top:2px}
+  .ventas-table{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  .ventas-table table{width:100%;border-collapse:collapse;font-size:13px}
+  .ventas-table th{background:var(--surface2);padding:10px 14px;text-align:left;font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;border-bottom:.5px solid var(--border2)}
+  .ventas-table td{padding:10px 14px;border-bottom:.5px solid var(--border);color:var(--text)}
+  .ventas-table tr:last-child td{border-bottom:none}
+  .ventas-table tr:hover td{background:var(--surface2)}
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+  .badge-cash{background:var(--success-bg);color:var(--success-text)}
+  .badge-card{background:var(--accent-bg);color:var(--accent-text)}
+  .badge-transfer{background:var(--amber-bg);color:var(--amber-text)}
+  .no-data{padding:40px;text-align:center;color:var(--text3);font-size:14px}
+  .del-venta-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px}
+  .del-venta-btn:hover{color:var(--danger);background:var(--danger-bg)}
+  .detail-toggle{background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;padding:2px 6px}
+  .admin-layout{padding:20px 24px;max-width:1000px;margin:0 auto}
+  .admin-lock{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center}
+  .lock-icon{font-size:40px;color:var(--text3);margin-bottom:16px}
+  .lock-title{font-size:20px;font-weight:600;margin-bottom:6px}
+  .lock-sub{font-size:14px;color:var(--text2);margin-bottom:24px}
+  .lock-form{display:flex;gap:8px}
+  .lock-form input{padding:9px 14px;border:.5px solid var(--border2);border-radius:var(--radius-sm);font-size:14px;outline:none;width:220px}
+  .lock-form input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(24,95,165,.1)}
+  .lock-form button{padding:9px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:500;cursor:pointer}
+  .lock-err{font-size:13px;color:var(--danger);margin-top:8px}
+  .admin-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+  .admin-header h2{font-size:20px;font-weight:600}
+  .logout-btn{font-size:13px;color:var(--text2);background:none;border:.5px solid var(--border2);border-radius:var(--radius-sm);padding:6px 12px;cursor:pointer}
+  .logout-btn:hover{background:var(--surface2)}
+  .admin-sections{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+  .admin-card{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius);padding:18px}
+  .admin-card-title{font-size:15px;font-weight:600;margin-bottom:14px}
+  .admin-form{display:flex;flex-direction:column;gap:10px}
+  .form-row{display:flex;flex-direction:column;gap:4px}
+  .form-row label{font-size:12px;font-weight:500;color:var(--text2)}
+  .form-row input{padding:8px 10px;border:.5px solid var(--border2);border-radius:var(--radius-sm);font-size:14px;outline:none;background:var(--surface);color:var(--text)}
+  .form-row input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(24,95,165,.1)}
+  .form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .add-prod-btn{padding:9px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:500;cursor:pointer;margin-top:4px}
+  .add-prod-btn:hover{background:#0f4a8a}
+  .prod-list-admin{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow-y:auto}
+  .prod-item-admin{display:flex;align-items:center;gap:8px;padding:8px 10px;border:.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)}
+  .pia-info{flex:1;min-width:0}
+  .pia-name{font-size:13px;font-weight:500}
+  .pia-meta{font-size:12px;color:var(--text3)}
+  .pia-price{font-size:14px;font-weight:700;color:var(--accent-text);min-width:70px;text-align:right}
+  .pia-actions{display:flex;gap:4px}
+  .pia-edit,.pia-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:3px 6px;border-radius:4px}
+  .pia-edit:hover{color:var(--accent);background:var(--accent-bg)}
+  .pia-del:hover{color:var(--danger);background:var(--danger-bg)}
+  .toast{position:fixed;bottom:24px;right:24px;background:var(--text);color:#fff;padding:12px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;z-index:9999;transform:translateY(100px);opacity:0;transition:all .3s;pointer-events:none}
+  .toast.show{transform:translateY(0);opacity:1}
+  .toast.success{background:var(--success)}
+  .toast.error{background:var(--danger)}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:500;display:none;align-items:center;justify-content:center}
+  .modal-overlay.open{display:flex}
+  .modal{background:var(--surface);border-radius:var(--radius);padding:24px;width:360px;max-width:95vw}
+  .modal h3{font-size:17px;font-weight:600;margin-bottom:16px}
+  .modal-actions{display:flex;gap:8px;margin-top:18px;justify-content:flex-end}
+  .modal-actions button{padding:8px 16px;border-radius:var(--radius-sm);font-size:14px;font-weight:500;cursor:pointer}
+  .btn-cancel{background:none;border:.5px solid var(--border2);color:var(--text2)}
+  .btn-cancel:hover{background:var(--surface2)}
+  .btn-confirm{background:var(--accent);color:#fff;border:none}
+  .btn-confirm:hover{background:#0f4a8a}
+  @media(max-width:768px){.ventas-layout,.admin-sections{grid-template-columns:1fr}.summary-cards{grid-template-columns:1fr 1fr}.cart-panel{position:static}}
 </style>
 </head>
 <body>
 
+<div id="app-loader">
+  <div class="loader-spinner"></div>
+  <div class="loader-text">Conectando con Firebase...</div>
+</div>
+
 <nav>
-  <div class="nav-brand">&#128722; <span>PuntoVenta</span></div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="nav-brand">&#128722; <span>PuntoVenta</span></div>
+    <div class="nav-status" id="nav-status"><span class="sync-dot"></span>Conectando...</div>
+  </div>
   <div class="nav-tabs">
-    <button class="tab-btn active" onclick="showSection('ventas')">&#128722; Vender</button>
-    <button class="tab-btn" onclick="showSection('historial')">&#128203; Historial</button>
-    <button class="tab-btn" onclick="showSection('admin')">&#9881; Admin</button>
+    <button class="tab-btn active" onclick="showSection('ventas',this)">&#128722; Vender</button>
+    <button class="tab-btn" onclick="showSection('historial',this)">&#128203; Historial</button>
+    <button class="tab-btn" onclick="showSection('admin',this)">&#9881; Admin</button>
   </div>
   <div class="nav-right">
     <button class="export-btn" onclick="exportarExcel()">&#8595; Exportar Excel</button>
   </div>
 </nav>
 
-<!-- VENTAS -->
 <div id="sec-ventas" class="section active">
   <div class="ventas-layout">
     <div>
       <p class="panel-title">Catálogo de productos</p>
-      <div class="search-bar">
-        <span class="search-icon">&#128269;</span>
-        <input type="text" id="search-input" placeholder="Buscar producto..." oninput="renderProducts()">
-      </div>
+      <div class="search-bar"><span class="search-icon">&#128269;</span><input type="text" id="search-input" placeholder="Buscar producto..." oninput="renderProducts()"></div>
       <div class="cat-filter" id="cat-filter"></div>
       <div class="products-grid" id="products-grid"></div>
     </div>
     <div>
       <div class="cart-panel">
-        <div class="cart-header">
-          <span class="cart-title">&#128722; Carrito</span>
-          <button class="clear-btn" onclick="clearCart()">Vaciar</button>
-        </div>
-        <div id="cart-items-container">
-          <div class="cart-empty" id="cart-empty">Sin productos agregados</div>
-        </div>
-        <div id="cart-totals-section" style="display:none;">
+        <div class="cart-header"><span class="cart-title">&#128722; Carrito</span><button class="clear-btn" onclick="clearCart()">Vaciar</button></div>
+        <div id="cart-items-container"><div class="cart-empty">Sin productos agregados</div></div>
+        <div id="cart-totals-section" style="display:none">
           <hr class="cart-divider">
-          <div class="client-row">
-            <input type="text" id="client-name" placeholder="Nombre del cliente (opcional)">
-          </div>
+          <div class="client-row"><input type="text" id="client-name" placeholder="Nombre del cliente (opcional)"></div>
           <div class="descuento-row">
             <input type="number" id="descuento-val" placeholder="Descuento" min="0" oninput="updateCartTotals()">
-            <select id="descuento-tipo" onchange="updateCartTotals()">
-              <option value="pct">%</option>
-              <option value="fixed">$</option>
-            </select>
+            <select id="descuento-tipo" onchange="updateCartTotals()"><option value="pct">%</option><option value="fixed">$</option></select>
           </div>
           <div class="cart-totals">
             <div class="total-row"><span>Subtotal</span><span id="cart-subtotal">$0</span></div>
-            <div class="total-row" id="desc-row" style="display:none;"><span>Descuento</span><span id="cart-desc" style="color:var(--success);">-$0</span></div>
+            <div class="total-row" id="desc-row" style="display:none"><span>Descuento</span><span id="cart-desc" style="color:var(--success)">-$0</span></div>
             <div class="total-row main"><span>Total</span><span id="cart-total">$0</span></div>
           </div>
-          <p class="panel-title" style="margin-bottom:6px;">Método de pago</p>
+          <p class="panel-title" style="margin-bottom:6px">Método de pago</p>
           <div class="pay-methods">
             <button class="pay-btn active" onclick="selectPay('Efectivo',this)">&#128181; Efectivo</button>
             <button class="pay-btn" onclick="selectPay('Tarjeta',this)">&#128179; Tarjeta</button>
@@ -280,34 +215,22 @@
   </div>
 </div>
 
-<!-- HISTORIAL -->
 <div id="sec-historial" class="section">
   <div class="historial-layout">
     <div class="hist-filters">
       <input type="date" id="filter-desde" onchange="renderHistorial()">
       <input type="date" id="filter-hasta" onchange="renderHistorial()">
-      <select id="filter-pago" onchange="renderHistorial()">
-        <option value="">Todos los métodos</option>
-        <option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option>
-      </select>
-      <button style="padding:7px 12px; border:0.5px solid var(--border2); border-radius:var(--radius-sm); background:var(--surface); font-size:13px; cursor:pointer;" onclick="clearFilters()">Limpiar filtros</button>
+      <select id="filter-pago" onchange="renderHistorial()"><option value="">Todos los métodos</option><option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option></select>
+      <button style="padding:7px 12px;border:.5px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);font-size:13px;cursor:pointer" onclick="clearFilters()">Limpiar filtros</button>
     </div>
     <div class="summary-cards" id="summary-cards"></div>
     <div class="ventas-table">
-      <table>
-        <thead>
-          <tr>
-            <th>#</th><th>Fecha</th><th>Cliente</th><th>Productos</th><th>Pago</th><th>Total</th><th></th>
-          </tr>
-        </thead>
-        <tbody id="historial-tbody"></tbody>
-      </table>
-      <div class="no-data" id="no-data" style="display:none;">No hay ventas registradas en este período</div>
+      <table><thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Productos</th><th>Pago</th><th>Total</th><th></th></tr></thead><tbody id="historial-tbody"></tbody></table>
+      <div class="no-data" id="no-data" style="display:none">No hay ventas en este período</div>
     </div>
   </div>
 </div>
 
-<!-- ADMIN -->
 <div id="sec-admin" class="section">
   <div class="admin-layout">
     <div id="admin-lock">
@@ -315,56 +238,35 @@
         <div class="lock-icon">&#128274;</div>
         <div class="lock-title">Área de administración</div>
         <div class="lock-sub">Ingresa la contraseña para continuar</div>
-        <div class="lock-form">
-          <input type="password" id="admin-pass-input" placeholder="Contraseña" onkeydown="if(event.key==='Enter')checkAdmin()">
-          <button onclick="checkAdmin()">Entrar</button>
-        </div>
+        <div class="lock-form"><input type="password" id="admin-pass-input" placeholder="Contraseña" onkeydown="if(event.key==='Enter')checkAdmin()"><button onclick="checkAdmin()">Entrar</button></div>
         <div class="lock-err" id="lock-err"></div>
       </div>
     </div>
-    <div id="admin-panel" style="display:none;">
-      <div class="admin-header">
-        <h2>&#9881; Administración</h2>
-        <button class="logout-btn" onclick="logoutAdmin()">Cerrar sesión</button>
-      </div>
+    <div id="admin-panel" style="display:none">
+      <div class="admin-header"><h2>&#9881; Administración</h2><button class="logout-btn" onclick="logoutAdmin()">Cerrar sesión</button></div>
       <div class="admin-sections">
         <div>
           <div class="admin-card">
-            <div class="admin-card-title">&#43; Agregar / Editar Producto</div>
+            <div class="admin-card-title">+ Agregar / Editar Producto</div>
             <div class="admin-form">
               <input type="hidden" id="edit-id">
-              <div class="form-row">
-                <label>Nombre del producto *</label>
-                <input type="text" id="prod-nombre" placeholder="Ej: Camiseta básica">
-              </div>
-              <div class="form-row">
-                <label>Categoría</label>
-                <input type="text" id="prod-cat" placeholder="Ej: Ropa, Electrónica, Hogar...">
-              </div>
+              <div class="form-row"><label>Nombre *</label><input type="text" id="prod-nombre" placeholder="Ej: Camiseta básica"></div>
+              <div class="form-row"><label>Categoría</label><input type="text" id="prod-cat" placeholder="Ej: Entretención, Mampato..."></div>
               <div class="form-row-2">
-                <div class="form-row">
-                  <label>Precio *</label>
-                  <input type="number" id="prod-precio" placeholder="0" min="0">
-                </div>
-                <div class="form-row">
-                  <label>Stock</label>
-                  <input type="number" id="prod-stock" placeholder="Sin límite" min="0">
-                </div>
+                <div class="form-row"><label>Precio *</label><input type="number" id="prod-precio" placeholder="0" min="0" step="1"></div>
+                <div class="form-row"><label>Stock</label><input type="number" id="prod-stock" placeholder="Sin límite" min="0"></div>
               </div>
-              <div class="form-row">
-                <label>Código / SKU (opcional)</label>
-                <input type="text" id="prod-sku" placeholder="Ej: CAM-001">
-              </div>
+              <div class="form-row"><label>Código / SKU</label><input type="text" id="prod-sku" placeholder="Ej: ENT-001"></div>
               <button class="add-prod-btn" onclick="guardarProducto()">Guardar producto</button>
-              <button id="cancel-edit-btn" style="display:none; padding:7px; background:none; border:0.5px solid var(--border2); border-radius:var(--radius-sm); font-size:13px; cursor:pointer; color:var(--text2);" onclick="cancelEdit()">Cancelar edición</button>
+              <button id="cancel-edit-btn" style="display:none;padding:7px;background:none;border:.5px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;cursor:pointer;color:var(--text2)" onclick="cancelEdit()">Cancelar edición</button>
             </div>
           </div>
-          <div class="admin-card" style="margin-top:16px;">
+          <div class="admin-card" style="margin-top:16px">
             <div class="admin-card-title">&#128274; Seguridad</div>
             <div class="admin-form">
               <div class="form-row"><label>Nueva contraseña</label><input type="password" id="new-pass1" placeholder="Nueva contraseña"></div>
-              <div class="form-row"><label>Confirmar contraseña</label><input type="password" id="new-pass2" placeholder="Repetir contraseña"></div>
-              <button class="add-prod-btn" onclick="changePassword()" style="background:var(--success);">Cambiar contraseña</button>
+              <div class="form-row"><label>Confirmar</label><input type="password" id="new-pass2" placeholder="Repetir contraseña"></div>
+              <button class="add-prod-btn" onclick="changePassword()" style="background:var(--success)">Cambiar contraseña</button>
             </div>
           </div>
         </div>
@@ -372,7 +274,7 @@
           <div class="admin-card">
             <div class="admin-card-title">&#128722; Productos (<span id="prod-count">0</span>)</div>
             <div class="prod-list-admin" id="prod-list-admin"></div>
-            <div class="no-data" id="no-prod-admin" style="display:none; padding:20px 0;">Sin productos aún. ¡Agrega el primero!</div>
+            <div class="no-data" id="no-prod-admin" style="display:none;padding:20px 0">Sin productos aún</div>
           </div>
         </div>
       </div>
@@ -380,7 +282,6 @@
   </div>
 </div>
 
-<!-- MODAL CONFIRMAR VENTA -->
 <div class="modal-overlay" id="modal-venta">
   <div class="modal">
     <h3>&#127881; Confirmar venta</h3>
@@ -392,483 +293,252 @@
   </div>
 </div>
 
-<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
 <script>
-// STATE
-let products = JSON.parse(localStorage.getItem('pv_products') || '[]');
-let ventas = JSON.parse(localStorage.getItem('pv_ventas') || '[]');
-let adminPass = localStorage.getItem('pv_pass') || '1234';
-let cart = [];
-let selectedPay = 'Efectivo';
-let adminLoggedIn = false;
-let activeCategory = 'Todas';
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyDF9nVz5koUEmdMlsWxKAa6KZOXqwUSQD4",
+  authDomain: "puntoventa-familia.firebaseapp.com",
+  projectId: "puntoventa-familia",
+  storageBucket: "puntoventa-familia.firebasestorage.app",
+  messagingSenderId: "27026081012",
+  appId: "1:27026081012:web:e6b759beb8c9847d90caa1"
+};
 
-function save() {
-  localStorage.setItem('pv_products', JSON.stringify(products));
-  localStorage.setItem('pv_ventas', JSON.stringify(ventas));
-  localStorage.setItem('pv_pass', adminPass);
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// STATE
+let products = [], ventas = [], adminPass = '1234', cart = [], selectedPay = 'Efectivo', adminLoggedIn = false, activeCategory = 'Todas';
+
+// INIT
+async function init() {
+  try {
+    const snap = await db.collection('config').doc('settings').get();
+    if (snap.exists) adminPass = snap.data().password || '1234';
+  } catch(e) {}
+
+  db.collection('products').onSnapshot(snap => {
+    products = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderProducts(); renderCatFilter();
+    if (adminLoggedIn) renderAdminList();
+  }, err => console.error('Products error:', err));
+
+  db.collection('ventas').orderBy('fecha', 'desc').onSnapshot(snap => {
+    ventas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderHistorial();
+  }, err => {
+    // fallback without orderBy
+    db.collection('ventas').onSnapshot(snap2 => {
+      ventas = snap2.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.fecha > a.fecha ? 1 : -1);
+      renderHistorial();
+    });
+  });
+
+  document.getElementById('app-loader').style.display = 'none';
+  document.getElementById('nav-status').innerHTML = '<span class="sync-dot"></span>En línea';
 }
 
+init();
+
 // NAV
-function showSection(s) {
+function showSection(s, btn) {
   document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
   document.getElementById('sec-' + s).classList.add('active');
-  event.target.classList.add('active');
+  if (btn) btn.classList.add('active');
   if (s === 'historial') renderHistorial();
   if (s === 'admin') renderAdminList();
 }
 
 // PRODUCTS
-function getCategories() {
-  const cats = ['Todas', ...new Set(products.map(p => p.cat || 'Sin categoría').filter(Boolean))];
-  return cats;
-}
-
 function renderCatFilter() {
+  const cats = ['Todas', ...new Set(products.map(p => p.cat || 'Sin categoría'))];
   const el = document.getElementById('cat-filter');
-  el.innerHTML = getCategories().map(c =>
-    `<span class="cat-pill${c === activeCategory ? ' active' : ''}" onclick="setCategory('${c}')">${c}</span>`
-  ).join('');
+  if (el) el.innerHTML = cats.map(c => `<span class="cat-pill${c === activeCategory ? ' active' : ''}" onclick="setCategory('${c}')">${c}</span>`).join('');
 }
-
-function setCategory(c) {
-  activeCategory = c;
-  renderCatFilter();
-  renderProducts();
-}
-
+function setCategory(c) { activeCategory = c; renderCatFilter(); renderProducts(); }
 function renderProducts() {
-  const q = document.getElementById('search-input').value.toLowerCase();
-  let filtered = products.filter(p => {
-    const matchQ = !q || p.name.toLowerCase().includes(q) || (p.sku && p.sku.toLowerCase().includes(q));
-    const matchCat = activeCategory === 'Todas' || (p.cat || 'Sin categoría') === activeCategory;
-    return matchQ && matchCat;
+  const q = (document.getElementById('search-input')?.value || '').toLowerCase();
+  const filtered = products.filter(p => {
+    const mQ = !q || p.name.toLowerCase().includes(q) || (p.sku && p.sku.toLowerCase().includes(q));
+    const mC = activeCategory === 'Todas' || (p.cat || 'Sin categoría') === activeCategory;
+    return mQ && mC;
   });
-  renderCatFilter();
   const grid = document.getElementById('products-grid');
-  if (!filtered.length) {
-    grid.innerHTML = `<div class="no-products" style="grid-column:1/-1">No se encontraron productos</div>`;
-    return;
-  }
+  if (!grid) return;
+  if (!filtered.length) { grid.innerHTML = '<div class="no-products">No se encontraron productos</div>'; return; }
   grid.innerHTML = filtered.map(p => {
-    const outOfStock = p.stock !== null && p.stock !== undefined && p.stock !== '' && Number(p.stock) <= 0;
-    const lowStock = p.stock !== null && p.stock !== undefined && p.stock !== '' && Number(p.stock) > 0 && Number(p.stock) <= 3;
-    return `
-    <div class="product-card${outOfStock ? ' out-of-stock' : ''}" onclick="${outOfStock ? '' : `addToCart('${p.id}')`}">
+    const oos = p.stock !== null && p.stock !== undefined && p.stock !== '' && Number(p.stock) <= 0;
+    const low = !oos && p.stock !== '' && p.stock !== null && p.stock !== undefined && Number(p.stock) <= 3;
+    return `<div class="product-card${oos ? ' out-of-stock' : ''}" onclick="${oos ? '' : "addToCart('" + p.id + "')"}">
       <div class="prod-cat">${p.cat || 'Sin categoría'}</div>
       <div class="prod-name">${p.name}</div>
-      <div class="prod-price">${formatCurrency(p.price)}</div>
+      <div class="prod-price">${fmtCLP(p.price)}</div>
       ${p.sku ? `<div class="prod-stock">${p.sku}</div>` : ''}
-      ${p.stock !== '' && p.stock !== null && p.stock !== undefined ? 
-        `<div class="prod-stock${lowStock ? ' low' : ''}">${outOfStock ? '❌ Sin stock' : lowStock ? `⚠ Stock: ${p.stock}` : `Stock: ${p.stock}`}</div>` : ''}
+      ${p.stock !== '' && p.stock !== null && p.stock !== undefined ? `<div class="prod-stock${low ? ' low' : ''}">${oos ? '❌ Sin stock' : 'Stock: ' + p.stock}</div>` : ''}
     </div>`;
   }).join('');
 }
 
 // CART
 function addToCart(id) {
-  const p = products.find(x => x.id === id);
-  if (!p) return;
-  const existing = cart.find(x => x.id === id);
-  if (existing) {
-    if (p.stock !== '' && p.stock !== null && p.stock !== undefined && existing.qty >= Number(p.stock)) {
-      showToast('Stock insuficiente', 'error'); return;
-    }
-    existing.qty++;
-  } else {
-    cart.push({ id: p.id, name: p.name, price: p.price, qty: 1 });
-  }
-  renderCart();
-  showToast(`${p.name} agregado`);
+  const p = products.find(x => x.id === id); if (!p) return;
+  const ex = cart.find(x => x.id === id);
+  if (ex) {
+    if (p.stock !== '' && p.stock !== null && p.stock !== undefined && ex.qty >= Number(p.stock)) { showToast('Stock insuficiente', 'error'); return; }
+    ex.qty++;
+  } else { cart.push({ id: p.id, name: p.name, price: p.price, qty: 1 }); }
+  renderCart(); showToast(p.name + ' agregado');
 }
-
-function changeQty(id, delta) {
-  const item = cart.find(x => x.id === id);
-  if (!item) return;
-  item.qty += delta;
-  if (item.qty <= 0) cart = cart.filter(x => x.id !== id);
+function changeQty(id, d) {
+  const i = cart.find(x => x.id === id); if (!i) return;
+  i.qty += d; if (i.qty <= 0) cart = cart.filter(x => x.id !== id);
   renderCart();
 }
-
-function clearCart() {
-  cart = [];
-  renderCart();
-}
-
+function clearCart() { cart = []; renderCart(); }
 function renderCart() {
-  const container = document.getElementById('cart-items-container');
-  const totals = document.getElementById('cart-totals-section');
-  const empty = document.getElementById('cart-empty');
-  if (!cart.length) {
-    container.innerHTML = '<div class="cart-empty" id="cart-empty">Sin productos agregados</div>';
-    totals.style.display = 'none';
-    return;
-  }
-  const items = cart.map(item => `
+  const c = document.getElementById('cart-items-container'), t = document.getElementById('cart-totals-section');
+  if (!cart.length) { c.innerHTML = '<div class="cart-empty">Sin productos agregados</div>'; t.style.display = 'none'; return; }
+  c.innerHTML = '<div class="cart-items">' + cart.map(i => `
     <div class="cart-item">
-      <div class="cart-item-info">
-        <div class="cart-item-name">${item.name}</div>
-        <div class="cart-item-price">${formatCurrency(item.price)} c/u</div>
-      </div>
-      <div class="cart-qty">
-        <button class="qty-btn" onclick="changeQty('${item.id}',-1)">−</button>
-        <span class="qty-num">${item.qty}</span>
-        <button class="qty-btn" onclick="changeQty('${item.id}',1)">+</button>
-      </div>
-      <div class="cart-item-total">${formatCurrency(item.price * item.qty)}</div>
-    </div>`).join('');
-  container.innerHTML = `<div class="cart-items">${items}</div>`;
-  totals.style.display = 'block';
-  updateCartTotals();
+      <div class="cart-item-info"><div class="cart-item-name">${i.name}</div><div class="cart-item-price">${fmtCLP(i.price)} c/u</div></div>
+      <div class="cart-qty"><button class="qty-btn" onclick="changeQty('${i.id}',-1)">−</button><span class="qty-num">${i.qty}</span><button class="qty-btn" onclick="changeQty('${i.id}',1)">+</button></div>
+      <div class="cart-item-total">${fmtCLP(i.price * i.qty)}</div>
+    </div>`).join('') + '</div>';
+  t.style.display = 'block'; updateCartTotals();
 }
-
 function updateCartTotals() {
-  const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const sub = cart.reduce((s, i) => s + i.price * i.qty, 0);
   const dv = parseFloat(document.getElementById('descuento-val').value) || 0;
   const dt = document.getElementById('descuento-tipo').value;
-  let desc = dt === 'pct' ? subtotal * dv / 100 : dv;
-  desc = Math.max(0, Math.min(desc, subtotal));
-  const total = subtotal - desc;
-  document.getElementById('cart-subtotal').textContent = formatCurrency(subtotal);
-  document.getElementById('cart-total').textContent = formatCurrency(total);
-  const descRow = document.getElementById('desc-row');
-  if (desc > 0) {
-    descRow.style.display = 'flex';
-    document.getElementById('cart-desc').textContent = `-${formatCurrency(desc)}`;
-  } else {
-    descRow.style.display = 'none';
-  }
+  let d = dt === 'pct' ? sub * dv / 100 : dv; d = Math.max(0, Math.min(d, sub));
+  document.getElementById('cart-subtotal').textContent = fmtCLP(sub);
+  document.getElementById('cart-total').textContent = fmtCLP(sub - d);
+  const dr = document.getElementById('desc-row');
+  if (d > 0) { dr.style.display = 'flex'; document.getElementById('cart-desc').textContent = '-' + fmtCLP(d); } else dr.style.display = 'none';
 }
-
-function selectPay(method, btn) {
-  selectedPay = method;
-  document.querySelectorAll('.pay-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-}
-
+function selectPay(m, btn) { selectedPay = m; document.querySelectorAll('.pay-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
 function confirmarVenta() {
   if (!cart.length) return;
-  const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const sub = cart.reduce((s, i) => s + i.price * i.qty, 0);
   const dv = parseFloat(document.getElementById('descuento-val').value) || 0;
   const dt = document.getElementById('descuento-tipo').value;
-  let desc = dt === 'pct' ? subtotal * dv / 100 : dv;
-  desc = Math.max(0, Math.min(desc, subtotal));
-  const total = subtotal - desc;
-  const client = document.getElementById('client-name').value || '—';
-  const modalContent = document.getElementById('modal-content');
-  modalContent.innerHTML = `
-    <table style="width:100%; font-size:13px; border-collapse:collapse;">
-      ${cart.map(i => `<tr><td style="padding:3px 0;">${i.name} x${i.qty}</td><td style="text-align:right; padding:3px 0;">${formatCurrency(i.price*i.qty)}</td></tr>`).join('')}
-      ${desc > 0 ? `<tr><td style="color:var(--success); padding:3px 0;">Descuento</td><td style="text-align:right; color:var(--success); padding:3px 0;">-${formatCurrency(desc)}</td></tr>` : ''}
+  let d = dt === 'pct' ? sub * dv / 100 : dv; d = Math.max(0, Math.min(d, sub));
+  document.getElementById('modal-content').innerHTML = `
+    <table style="width:100%;font-size:13px;border-collapse:collapse">
+      ${cart.map(i => `<tr><td style="padding:3px 0">${i.name} x${i.qty}</td><td style="text-align:right;padding:3px 0">${fmtCLP(i.price * i.qty)}</td></tr>`).join('')}
+      ${d > 0 ? `<tr><td style="color:var(--success)">Descuento</td><td style="text-align:right;color:var(--success)">-${fmtCLP(d)}</td></tr>` : ''}
     </table>
-    <div style="margin-top:10px; padding-top:10px; border-top:0.5px solid var(--border); display:flex; justify-content:space-between; font-weight:700; font-size:16px;">
-      <span>Total</span><span>${formatCurrency(total)}</span>
-    </div>
-    <div style="margin-top:8px; font-size:13px; color:var(--text2);">
-      Cliente: ${client} &nbsp;|&nbsp; Pago: ${selectedPay}
-    </div>`;
+    <div style="margin-top:10px;padding-top:10px;border-top:.5px solid var(--border);display:flex;justify-content:space-between;font-weight:700;font-size:16px"><span>Total</span><span>${fmtCLP(sub - d)}</span></div>
+    <div style="margin-top:8px;font-size:13px;color:var(--text2)">Cliente: ${document.getElementById('client-name').value || '—'} | Pago: ${selectedPay}</div>`;
   openModal('modal-venta');
 }
-
-function finalizarVenta() {
-  const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+async function finalizarVenta() {
+  const sub = cart.reduce((s, i) => s + i.price * i.qty, 0);
   const dv = parseFloat(document.getElementById('descuento-val').value) || 0;
   const dt = document.getElementById('descuento-tipo').value;
-  let desc = dt === 'pct' ? subtotal * dv / 100 : dv;
-  desc = Math.max(0, Math.min(desc, subtotal));
-  const total = subtotal - desc;
-  // update stock
-  cart.forEach(item => {
+  let d = dt === 'pct' ? sub * dv / 100 : dv; d = Math.max(0, Math.min(d, sub));
+  for (const item of cart) {
     const p = products.find(x => x.id === item.id);
-    if (p && p.stock !== '' && p.stock !== null && p.stock !== undefined) {
-      p.stock = Math.max(0, Number(p.stock) - item.qty);
-    }
-  });
-  const venta = {
-    id: Date.now(),
-    fecha: new Date().toISOString(),
-    cliente: document.getElementById('client-name').value || '',
-    items: cart.map(i => ({...i})),
-    subtotal, descuento: desc, total, pago: selectedPay
-  };
-  ventas.unshift(venta);
-  save();
-  closeModal('modal-venta');
-  clearCart();
-  document.getElementById('client-name').value = '';
-  document.getElementById('descuento-val').value = '';
-  renderProducts();
-  showToast('✓ Venta registrada correctamente', 'success');
+    if (p && p.stock !== '' && p.stock !== null && p.stock !== undefined)
+      await db.collection('products').doc(p.id).update({ stock: Math.max(0, Number(p.stock) - item.qty) });
+  }
+  await db.collection('ventas').add({ fecha: new Date().toISOString(), cliente: document.getElementById('client-name').value || '', items: cart.map(i => ({ ...i })), subtotal: sub, descuento: d, total: sub - d, pago: selectedPay });
+  closeModal('modal-venta'); clearCart();
+  document.getElementById('client-name').value = ''; document.getElementById('descuento-val').value = '';
+  showToast('✓ Venta registrada', 'success');
 }
 
 // HISTORIAL
 function getFilteredVentas() {
   let v = [...ventas];
-  const desde = document.getElementById('filter-desde').value;
-  const hasta = document.getElementById('filter-hasta').value;
-  const pago = document.getElementById('filter-pago').value;
-  if (desde) v = v.filter(x => x.fecha.slice(0,10) >= desde);
-  if (hasta) v = v.filter(x => x.fecha.slice(0,10) <= hasta);
-  if (pago) v = v.filter(x => x.pago === pago);
+  const d = document.getElementById('filter-desde')?.value, h = document.getElementById('filter-hasta')?.value, p = document.getElementById('filter-pago')?.value;
+  if (d) v = v.filter(x => x.fecha.slice(0, 10) >= d); if (h) v = v.filter(x => x.fecha.slice(0, 10) <= h); if (p) v = v.filter(x => x.pago === p);
   return v;
 }
-
-function clearFilters() {
-  document.getElementById('filter-desde').value = '';
-  document.getElementById('filter-hasta').value = '';
-  document.getElementById('filter-pago').value = '';
-  renderHistorial();
-}
-
+function clearFilters() { document.getElementById('filter-desde').value = ''; document.getElementById('filter-hasta').value = ''; document.getElementById('filter-pago').value = ''; renderHistorial(); }
 function renderHistorial() {
   const v = getFilteredVentas();
-  const totalVentas = v.reduce((s, x) => s + x.total, 0);
-  const totalDesc = v.reduce((s, x) => s + (x.descuento || 0), 0);
-  const itemsVendidos = v.reduce((s, x) => s + x.items.reduce((a, i) => a + i.qty, 0), 0);
-  const cards = document.getElementById('summary-cards');
-  cards.innerHTML = `
-    <div class="sum-card"><div class="sum-label">Ventas</div><div class="sum-value">${v.length}</div><div class="sum-sub">transacciones</div></div>
-    <div class="sum-card"><div class="sum-label">Ingresos</div><div class="sum-value">${formatCurrency(totalVentas)}</div><div class="sum-sub">total cobrado</div></div>
-    <div class="sum-card"><div class="sum-label">Ítems vendidos</div><div class="sum-value">${itemsVendidos}</div><div class="sum-sub">unidades</div></div>
-    <div class="sum-card"><div class="sum-label">Descuentos</div><div class="sum-value">${formatCurrency(totalDesc)}</div><div class="sum-sub">total descontado</div></div>`;
-  const tbody = document.getElementById('historial-tbody');
-  const noData = document.getElementById('no-data');
-  if (!v.length) { tbody.innerHTML = ''; noData.style.display = 'block'; return; }
-  noData.style.display = 'none';
+  const tV = v.reduce((s, x) => s + x.total, 0), tD = v.reduce((s, x) => s + (x.descuento || 0), 0), items = v.reduce((s, x) => s + x.items.reduce((a, i) => a + i.qty, 0), 0);
+  const sc = document.getElementById('summary-cards');
+  if (sc) sc.innerHTML = `<div class="sum-card"><div class="sum-label">Ventas</div><div class="sum-value">${v.length}</div><div class="sum-sub">transacciones</div></div><div class="sum-card"><div class="sum-label">Ingresos</div><div class="sum-value">${fmtCLP(tV)}</div><div class="sum-sub">total cobrado</div></div><div class="sum-card"><div class="sum-label">Ítems vendidos</div><div class="sum-value">${items}</div><div class="sum-sub">unidades</div></div><div class="sum-card"><div class="sum-label">Descuentos</div><div class="sum-value">${fmtCLP(tD)}</div><div class="sum-sub">total descontado</div></div>`;
+  const tbody = document.getElementById('historial-tbody'), nd = document.getElementById('no-data');
+  if (!tbody) return;
+  if (!v.length) { tbody.innerHTML = ''; if (nd) nd.style.display = 'block'; return; }
+  if (nd) nd.style.display = 'none';
   tbody.innerHTML = v.map((venta, i) => {
-    const date = new Date(venta.fecha);
-    const dateStr = date.toLocaleDateString('es-CL') + ' ' + date.toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'});
-    const itemsSummary = venta.items.map(x => `${x.name} x${x.qty}`).join(', ');
-    const badgeClass = venta.pago === 'Efectivo' ? 'badge-cash' : venta.pago === 'Tarjeta' ? 'badge-card' : 'badge-transfer';
-    return `
-    <tr>
-      <td style="color:var(--text3);">${ventas.indexOf(venta)+1}</td>
-      <td>${dateStr}</td>
-      <td>${venta.cliente || '—'}</td>
-      <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${itemsSummary}">
-        <button class="detail-toggle" onclick="toggleDetail('${venta.id}')">Ver (${venta.items.length})</button>
-      </td>
-      <td><span class="badge ${badgeClass}">${venta.pago}</span></td>
-      <td style="font-weight:700;">${formatCurrency(venta.total)}</td>
-      <td><button class="del-venta-btn" onclick="deleteVenta('${venta.id}')" title="Eliminar">✕</button></td>
-    </tr>
-    <tr id="detail-${venta.id}" style="display:none;" class="detail-row">
-      <td colspan="7">
-        <strong>Detalle:</strong> ${venta.items.map(x => `${x.name} x${x.qty} = ${formatCurrency(x.price*x.qty)}`).join(' | ')}
-        ${venta.descuento > 0 ? ` | Descuento: -${formatCurrency(venta.descuento)}` : ''}
-      </td>
-    </tr>`;
+    const dt = new Date(venta.fecha);
+    const ds = dt.toLocaleDateString('es-CL') + ' ' + dt.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+    const bc = venta.pago === 'Efectivo' ? 'badge-cash' : venta.pago === 'Tarjeta' ? 'badge-card' : 'badge-transfer';
+    return `<tr><td style="color:var(--text3)">${i + 1}</td><td>${ds}</td><td>${venta.cliente || '—'}</td><td><button class="detail-toggle" onclick="toggleDetail('${venta.id}')">Ver (${venta.items.length})</button></td><td><span class="badge ${bc}">${venta.pago}</span></td><td style="font-weight:700">${fmtCLP(venta.total)}</td><td><button class="del-venta-btn" onclick="deleteVenta('${venta.id}')">✕</button></td></tr>
+    <tr id="detail-${venta.id}" style="display:none"><td colspan="7" style="background:var(--accent-bg);color:var(--accent-text);font-size:12px;padding:6px 14px">${venta.items.map(x => `${x.name} x${x.qty} = ${fmtCLP(x.price * x.qty)}`).join(' | ')}${venta.descuento > 0 ? ' | Desc: -' + fmtCLP(venta.descuento) : ''}</td></tr>`;
   }).join('');
 }
-
-function toggleDetail(id) {
-  const row = document.getElementById('detail-' + id);
-  row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
-}
-
-function deleteVenta(id) {
-  if (!confirm('¿Eliminar esta venta?')) return;
-  ventas = ventas.filter(v => v.id != id);
-  save();
-  renderHistorial();
-  showToast('Venta eliminada');
-}
+function toggleDetail(id) { const r = document.getElementById('detail-' + id); if (r) r.style.display = r.style.display === 'none' ? 'table-row' : 'none'; }
+async function deleteVenta(id) { if (!confirm('¿Eliminar esta venta?')) return; await db.collection('ventas').doc(id).delete(); showToast('Venta eliminada'); }
 
 // ADMIN
 function checkAdmin() {
-  const val = document.getElementById('admin-pass-input').value;
-  if (val === adminPass) {
-    adminLoggedIn = true;
-    document.getElementById('admin-lock').style.display = 'none';
-    document.getElementById('admin-panel').style.display = 'block';
-    renderAdminList();
-    document.getElementById('lock-err').textContent = '';
-  } else {
-    document.getElementById('lock-err').textContent = 'Contraseña incorrecta';
-  }
+  const v = document.getElementById('admin-pass-input').value;
+  if (v === adminPass) { adminLoggedIn = true; document.getElementById('admin-lock').style.display = 'none'; document.getElementById('admin-panel').style.display = 'block'; renderAdminList(); document.getElementById('lock-err').textContent = ''; }
+  else document.getElementById('lock-err').textContent = 'Contraseña incorrecta';
 }
-
-function logoutAdmin() {
-  adminLoggedIn = false;
-  document.getElementById('admin-lock').style.display = 'block';
-  document.getElementById('admin-panel').style.display = 'none';
-  document.getElementById('admin-pass-input').value = '';
-}
-
-function guardarProducto() {
-  const name = document.getElementById('prod-nombre').value.trim();
-  const price = parseFloat(document.getElementById('prod-precio').value);
+function logoutAdmin() { adminLoggedIn = false; document.getElementById('admin-lock').style.display = 'block'; document.getElementById('admin-panel').style.display = 'none'; document.getElementById('admin-pass-input').value = ''; }
+async function guardarProducto() {
+  const name = document.getElementById('prod-nombre').value.trim(), price = parseFloat(document.getElementById('prod-precio').value);
   if (!name || isNaN(price) || price < 0) { showToast('Nombre y precio son requeridos', 'error'); return; }
-  const cat = document.getElementById('prod-cat').value.trim();
-  const stock = document.getElementById('prod-stock').value;
-  const sku = document.getElementById('prod-sku').value.trim();
-  const editId = document.getElementById('edit-id').value;
-  if (editId) {
-    const p = products.find(x => x.id === editId);
-    if (p) { p.name = name; p.price = price; p.cat = cat; p.stock = stock; p.sku = sku; }
-    showToast('Producto actualizado', 'success');
-    cancelEdit();
-  } else {
-    products.push({ id: 'p' + Date.now(), name, price, cat, stock, sku });
-    showToast('Producto agregado', 'success');
-  }
-  save();
-  renderAdminList();
-  renderProducts();
-  clearProdForm();
+  const data = { name, price: Math.round(price), cat: document.getElementById('prod-cat').value.trim(), stock: document.getElementById('prod-stock').value, sku: document.getElementById('prod-sku').value.trim() };
+  const eid = document.getElementById('edit-id').value;
+  if (eid) await db.collection('products').doc(eid).update(data);
+  else await db.collection('products').add(data);
+  showToast(eid ? 'Producto actualizado' : 'Producto agregado', 'success'); cancelEdit();
 }
-
-function cancelEdit() {
-  document.getElementById('edit-id').value = '';
-  document.getElementById('cancel-edit-btn').style.display = 'none';
-  document.querySelector('.add-prod-btn').textContent = 'Guardar producto';
-  clearProdForm();
-}
-
-function clearProdForm() {
-  ['prod-nombre','prod-cat','prod-precio','prod-stock','prod-sku'].forEach(id => document.getElementById(id).value = '');
-}
-
+function cancelEdit() { document.getElementById('edit-id').value = ''; document.getElementById('cancel-edit-btn').style.display = 'none'; document.querySelector('.add-prod-btn').textContent = 'Guardar producto'; ['prod-nombre', 'prod-cat', 'prod-precio', 'prod-stock', 'prod-sku'].forEach(id => document.getElementById(id).value = ''); }
 function editProduct(id) {
-  const p = products.find(x => x.id === id);
-  if (!p) return;
-  document.getElementById('edit-id').value = p.id;
-  document.getElementById('prod-nombre').value = p.name;
-  document.getElementById('prod-cat').value = p.cat || '';
-  document.getElementById('prod-precio').value = p.price;
-  document.getElementById('prod-stock').value = p.stock || '';
-  document.getElementById('prod-sku').value = p.sku || '';
-  document.getElementById('cancel-edit-btn').style.display = 'block';
-  document.querySelector('.add-prod-btn').textContent = 'Actualizar producto';
-  document.getElementById('prod-nombre').focus();
+  const p = products.find(x => x.id === id); if (!p) return;
+  document.getElementById('edit-id').value = p.id; document.getElementById('prod-nombre').value = p.name; document.getElementById('prod-cat').value = p.cat || ''; document.getElementById('prod-precio').value = p.price; document.getElementById('prod-stock').value = p.stock || ''; document.getElementById('prod-sku').value = p.sku || '';
+  document.getElementById('cancel-edit-btn').style.display = 'block'; document.querySelector('.add-prod-btn').textContent = 'Actualizar producto'; document.getElementById('prod-nombre').focus();
 }
-
-function deleteProduct(id) {
-  if (!confirm('¿Eliminar este producto?')) return;
-  products = products.filter(p => p.id !== id);
-  save();
-  renderAdminList();
-  renderProducts();
-  showToast('Producto eliminado');
-}
-
+async function deleteProduct(id) { if (!confirm('¿Eliminar este producto?')) return; await db.collection('products').doc(id).delete(); showToast('Producto eliminado'); }
 function renderAdminList() {
-  const list = document.getElementById('prod-list-admin');
-  const noP = document.getElementById('no-prod-admin');
+  const list = document.getElementById('prod-list-admin'), noP = document.getElementById('no-prod-admin'); if (!list) return;
   document.getElementById('prod-count').textContent = products.length;
-  if (!products.length) { list.innerHTML = ''; noP.style.display = 'block'; return; }
-  noP.style.display = 'none';
-  list.innerHTML = products.map(p => `
-    <div class="prod-item-admin">
-      <div class="pia-info">
-        <div class="pia-name">${p.name}</div>
-        <div class="pia-meta">${p.cat || 'Sin categoría'}${p.sku ? ' · ' + p.sku : ''}${p.stock !== '' && p.stock !== null && p.stock !== undefined ? ' · Stock: ' + p.stock : ''}</div>
-      </div>
-      <div class="pia-price">${formatCurrency(p.price)}</div>
-      <div class="pia-actions">
-        <button class="pia-edit" onclick="editProduct('${p.id}')" title="Editar">✏</button>
-        <button class="pia-del" onclick="deleteProduct('${p.id}')" title="Eliminar">✕</button>
-      </div>
-    </div>`).join('');
+  if (!products.length) { list.innerHTML = ''; if (noP) noP.style.display = 'block'; return; }
+  if (noP) noP.style.display = 'none';
+  list.innerHTML = products.map(p => `<div class="prod-item-admin"><div class="pia-info"><div class="pia-name">${p.name}</div><div class="pia-meta">${p.cat || 'Sin categoría'}${p.sku ? ' · ' + p.sku : ''}${p.stock !== '' && p.stock !== null && p.stock !== undefined ? ' · Stock: ' + p.stock : ''}</div></div><div class="pia-price">${fmtCLP(p.price)}</div><div class="pia-actions"><button class="pia-edit" onclick="editProduct('${p.id}')">✏</button><button class="pia-del" onclick="deleteProduct('${p.id}')">✕</button></div></div>`).join('');
 }
-
-function changePassword() {
-  const p1 = document.getElementById('new-pass1').value;
-  const p2 = document.getElementById('new-pass2').value;
-  if (!p1 || p1.length < 4) { showToast('La contraseña debe tener al menos 4 caracteres', 'error'); return; }
+async function changePassword() {
+  const p1 = document.getElementById('new-pass1').value, p2 = document.getElementById('new-pass2').value;
+  if (!p1 || p1.length < 4) { showToast('Mínimo 4 caracteres', 'error'); return; }
   if (p1 !== p2) { showToast('Las contraseñas no coinciden', 'error'); return; }
-  adminPass = p1;
-  save();
-  document.getElementById('new-pass1').value = '';
-  document.getElementById('new-pass2').value = '';
+  await db.collection('config').doc('settings').set({ password: p1 });
+  adminPass = p1; document.getElementById('new-pass1').value = ''; document.getElementById('new-pass2').value = '';
   showToast('Contraseña actualizada', 'success');
 }
 
-// EXCEL EXPORT
+// EXCEL
 function exportarExcel() {
   if (!ventas.length) { showToast('No hay ventas para exportar', 'error'); return; }
   const wb = XLSX.utils.book_new();
-  // Sheet 1: Detalle
-  const detalle = [];
-  detalle.push(['N°','Fecha','Hora','Cliente','Producto','SKU','Qty','Precio Unit.','Subtotal Ítem','Descuento Venta','Total Venta','Método Pago']);
-  ventas.forEach((v, i) => {
-    const date = new Date(v.fecha);
-    const dateStr = date.toLocaleDateString('es-CL');
-    const timeStr = date.toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'});
-    v.items.forEach(item => {
-      detalle.push([
-        i+1, dateStr, timeStr, v.cliente || '', item.name,
-        products.find(p => p.id === item.id)?.sku || '',
-        item.qty, item.price, item.price * item.qty,
-        v.descuento || 0, v.total, v.pago
-      ]);
-    });
-  });
-  const ws1 = XLSX.utils.aoa_to_sheet(detalle);
-  ws1['!cols'] = [5,10,8,15,20,10,6,12,14,14,12,14].map(w => ({wch: w}));
-  XLSX.utils.book_append_sheet(wb, ws1, 'Detalle de ventas');
-  // Sheet 2: Resumen diario
-  const byDay = {};
-  ventas.forEach(v => {
-    const d = v.fecha.slice(0,10);
-    if (!byDay[d]) byDay[d] = { ventas: 0, total: 0, efectivo: 0, tarjeta: 0, transferencia: 0, items: 0 };
-    byDay[d].ventas++;
-    byDay[d].total += v.total;
-    byDay[d].items += v.items.reduce((s, i) => s + i.qty, 0);
-    if (v.pago === 'Efectivo') byDay[d].efectivo += v.total;
-    if (v.pago === 'Tarjeta') byDay[d].tarjeta += v.total;
-    if (v.pago === 'Transferencia') byDay[d].transferencia += v.total;
-  });
-  const resumen = [['Fecha','Nº Ventas','Ítems Vendidos','Total Día','Efectivo','Tarjeta','Transferencia']];
-  Object.keys(byDay).sort().forEach(d => {
-    const r = byDay[d];
-    resumen.push([d, r.ventas, r.items, r.total, r.efectivo, r.tarjeta, r.transferencia]);
-  });
-  const ws2 = XLSX.utils.aoa_to_sheet(resumen);
-  ws2['!cols'] = [12,12,14,14,12,12,14].map(w => ({wch: w}));
-  XLSX.utils.book_append_sheet(wb, ws2, 'Resumen diario');
-  // Sheet 3: Productos más vendidos
-  const byProd = {};
-  ventas.forEach(v => {
-    v.items.forEach(item => {
-      if (!byProd[item.id]) byProd[item.id] = { name: item.name, qty: 0, total: 0 };
-      byProd[item.id].qty += item.qty;
-      byProd[item.id].total += item.price * item.qty;
-    });
-  });
-  const ranking = [['Producto','Unidades Vendidas','Total Generado']];
-  Object.values(byProd).sort((a,b) => b.qty - a.qty).forEach(p => {
-    ranking.push([p.name, p.qty, p.total]);
-  });
-  const ws3 = XLSX.utils.aoa_to_sheet(ranking);
-  ws3['!cols'] = [25,18,16].map(w => ({wch: w}));
-  XLSX.utils.book_append_sheet(wb, ws3, 'Productos más vendidos');
-  const fecha = new Date().toLocaleDateString('es-CL').replace(/\//g,'-');
-  XLSX.writeFile(wb, `ventas_${fecha}.xlsx`);
-  showToast('Excel exportado con 3 hojas', 'success');
+  const det = [['N°', 'Fecha', 'Hora', 'Cliente', 'Producto', 'SKU', 'Qty', 'Precio', 'Subtotal', 'Descuento', 'Total', 'Pago']];
+  ventas.forEach((v, i) => { const dt = new Date(v.fecha); v.items.forEach(it => { det.push([i + 1, dt.toLocaleDateString('es-CL'), dt.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }), v.cliente || '', it.name, products.find(p => p.id === it.id)?.sku || '', it.qty, it.price, it.price * it.qty, v.descuento || 0, v.total, v.pago]); }); });
+  const ws1 = XLSX.utils.aoa_to_sheet(det); ws1['!cols'] = [5, 10, 8, 15, 20, 10, 6, 12, 14, 14, 12, 14].map(w => ({ wch: w })); XLSX.utils.book_append_sheet(wb, ws1, 'Detalle de ventas');
+  const bd = {}; ventas.forEach(v => { const d = v.fecha.slice(0, 10); if (!bd[d]) bd[d] = { v: 0, t: 0, e: 0, ta: 0, tr: 0, i: 0 }; bd[d].v++; bd[d].t += v.total; bd[d].i += v.items.reduce((s, i) => s + i.qty, 0); if (v.pago === 'Efectivo') bd[d].e += v.total; if (v.pago === 'Tarjeta') bd[d].ta += v.total; if (v.pago === 'Transferencia') bd[d].tr += v.total; });
+  const res = [['Fecha', 'Nº Ventas', 'Ítems', 'Total', 'Efectivo', 'Tarjeta', 'Transferencia']]; Object.keys(bd).sort().forEach(d => { const r = bd[d]; res.push([d, r.v, r.i, r.t, r.e, r.ta, r.tr]); });
+  const ws2 = XLSX.utils.aoa_to_sheet(res); ws2['!cols'] = [12, 10, 8, 14, 12, 12, 14].map(w => ({ wch: w })); XLSX.utils.book_append_sheet(wb, ws2, 'Resumen diario');
+  const bp = {}; ventas.forEach(v => v.items.forEach(it => { if (!bp[it.id]) bp[it.id] = { name: it.name, qty: 0, total: 0 }; bp[it.id].qty += it.qty; bp[it.id].total += it.price * it.qty; }));
+  const rk = [['Producto', 'Unidades', 'Total']]; Object.values(bp).sort((a, b) => b.qty - a.qty).forEach(p => rk.push([p.name, p.qty, p.total]));
+  const ws3 = XLSX.utils.aoa_to_sheet(rk); ws3['!cols'] = [25, 12, 14].map(w => ({ wch: w })); XLSX.utils.book_append_sheet(wb, ws3, 'Más vendidos');
+  XLSX.writeFile(wb, 'ventas_' + new Date().toLocaleDateString('es-CL').replace(/\//g, '-') + '.xlsx');
+  showToast('Excel exportado', 'success');
 }
 
-// HELPERS
-function formatCurrency(n) {
-  return '$' + Math.round(n).toLocaleString('es-CL');
-}
-
-function showToast(msg, type = '') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast show' + (type ? ' ' + type : '');
-  setTimeout(() => t.className = 'toast', 2800);
-}
-
+function fmtCLP(n) { return '$' + Math.round(n).toLocaleString('es-CL'); }
+function showToast(msg, type = '') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast show' + (type ? ' ' + type : ''); setTimeout(() => t.className = 'toast', 2800); }
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-
-// INIT
-renderProducts();
-renderCatFilter();
 </script>
 </body>
 </html>
